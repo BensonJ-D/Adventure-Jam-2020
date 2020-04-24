@@ -1,60 +1,81 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor;
 
 public class MovementController : MonoBehaviour
 {
+    enum Actions {IDLE, WALKING, JUMPING, DOUBLE_JUMPING};
     Rigidbody2D rb;
+    Animator animator;
+    SpriteRenderer renderer;
+    
     [SerializeField] private Rect groundCollider;
-    [SerializeField] private float maxVelocity;
+    [SerializeField] private float maxFallSpeed;
+    [SerializeField] private float moveSpeed;
+    [SerializeField] private float jumpSpeed;
 
-    bool jump = false;
-    bool doubleJump = false;
+    Actions action = Actions.IDLE;
 
     // Start is called before the first frame update
     void Start()
     { 
         rb = GetComponent<Rigidbody2D>();
+        animator = GetComponent<Animator>();
+        renderer = GetComponent<SpriteRenderer>();
     }
-
-    // private void FixedUpdate() {
-    //     rb.velocity = Vector3.ClampMagnitude(rb.velocity, maxVelocity);
-    // }
-    // Update is called once per frame
+    
     void Update()
     {
-        this.HorizontalMovement();
+        this.Move();
+        this.Animate();
+        this.SetFacing();
+    }
+
+    void Animate() {
+        animator.SetBool("Grounded",        isTouchingGround());
+        animator.SetBool("Idle",            action == Actions.IDLE);
+        animator.SetBool("Walking",         action == Actions.WALKING);
+        animator.SetBool("Jumping",         action == Actions.JUMPING);
+        animator.SetBool("Double Jumping",  action == Actions.DOUBLE_JUMPING);
+    }
+
+    void Move()
+    {
         bool grounded = isTouchingGround();
-        
-        if(grounded) 
-        {
-            doubleJump = true;
-        }
+        float horizontal = Input.GetAxis("Horizontal");
+        rb.velocity = new Vector2(moveSpeed * horizontal, rb.velocity.y);
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            this.Jump(grounded);
+            if(grounded) {
+                action = Actions.JUMPING;
+                rb.velocity = new Vector2(rb.velocity.x, jumpSpeed);
+            } else if(action != Actions.DOUBLE_JUMPING) {
+                action = Actions.DOUBLE_JUMPING;
+                rb.velocity = new Vector2(rb.velocity.x, jumpSpeed);
+            }
+        } else if(grounded) {
+            if(horizontal != 0){
+                action = Actions.WALKING;
+            } else {
+                action = Actions.IDLE;
+            }
+        } else if(action != Actions.DOUBLE_JUMPING) {
+            action = Actions.JUMPING;
         }
-        Debug.Log("Grounded: " + grounded);
-        Debug.Log("Double Jump: " + doubleJump);
     }
 
-    void HorizontalMovement()
-    {
+    void SetFacing() {
         float horizontal = Input.GetAxis("Horizontal");
 
-        rb.velocity = new Vector2(3.0f * horizontal, rb.velocity.y);
-    }
-
-    void Jump(bool grounded)
-    {
-        if(grounded) {
-            rb.velocity = new Vector2(rb.velocity.x, 5.0f);
-        } else if(doubleJump) {
-            rb.velocity = new Vector2(rb.velocity.x, 5.0f);
-            doubleJump = false;
+        if(horizontal > 0){
+            renderer.flipX = false;
         }
-    }  
+        else if(horizontal < 0) {
+            renderer.flipX = true;
+        }
+    }
     
     bool isTouchingGround() {
         Vector2 myPos = transform.position;
@@ -80,10 +101,22 @@ public class MovementController : MonoBehaviour
         Gizmos.color = new Color(1.0f, 0.5f, 0.0f);
         DrawRect(groundCollider);
     }
+
+    void OnGUI() 
+    {
+        GUI.Label(new Rect(10, 10, 200, 200), "State: " + this.action);
+        GUI.Label(new Rect(10, 30, 200, 200), "Grounded: " + isTouchingGround()); 
+    }
      
     void DrawRect(Rect rect)
     {
         Vector2 myPos = transform.position;
         Gizmos.DrawWireCube(myPos + rect.center, rect.size);
+    }
+
+    Vector3 ScreenToWorld(float x, float y) {
+        Camera camera = Camera.current;
+        Vector3 s = camera.WorldToScreenPoint(new Vector3(x, y, 0));
+        return camera.ScreenToWorldPoint(s);
     }
 }
