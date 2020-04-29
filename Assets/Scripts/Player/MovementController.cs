@@ -5,7 +5,7 @@ using UnityEditor;
 
 public class MovementController : MonoBehaviour
 {
-    enum Actions {IDLE, WALKING, JUMPING, DOUBLE_JUMPING};
+    enum Animation {IDLE, WALKING, JUMPING, SLOW_FALL, FAST_FALL, LANDING};
     Rigidbody2D rb;
     Animator animator;
     SpriteRenderer renderer;
@@ -15,7 +15,8 @@ public class MovementController : MonoBehaviour
     [SerializeField] private float moveSpeed;
     [SerializeField] private float jumpSpeed;
 
-    Actions action = Actions.IDLE;
+    Animation animation = Animation.IDLE;
+    bool doubleJump = false;
 
     // Start is called before the first frame update
     void Start()
@@ -34,10 +35,11 @@ public class MovementController : MonoBehaviour
 
     void Animate() {
         animator.SetBool("Grounded",        isTouchingGround());
-        animator.SetBool("Idle",            action == Actions.IDLE);
-        animator.SetBool("Walking",         action == Actions.WALKING);
-        animator.SetBool("Jumping",         action == Actions.JUMPING);
-        animator.SetBool("Double Jumping",  action == Actions.DOUBLE_JUMPING);
+        animator.SetBool("Idle",            animation == Animation.IDLE);
+        animator.SetBool("Walking",         animation == Animation.WALKING);
+        animator.SetBool("Jumping",         animation == Animation.JUMPING);
+        animator.SetBool("Slow Fall",       animation == Animation.SLOW_FALL);
+        animator.SetBool("Fast Fall",       animation == Animation.FAST_FALL);
     }
 
     void Move()
@@ -49,20 +51,33 @@ public class MovementController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Space))
         {
             if(grounded) {
-                action = Actions.JUMPING;
                 rb.velocity = new Vector2(rb.velocity.x, jumpSpeed);
-            } else if(action != Actions.DOUBLE_JUMPING) {
-                action = Actions.DOUBLE_JUMPING;
+                grounded = false;
+            } else if(!grounded && doubleJump) {
                 rb.velocity = new Vector2(rb.velocity.x, jumpSpeed);
+                doubleJump = false;
+                grounded = false;
             }
-        } else if(grounded) {
+        } 
+        
+        if(grounded) {
+            doubleJump = true;
+            
             if(horizontal != 0){
-                action = Actions.WALKING;
+                animation = Animation.WALKING;
             } else {
-                action = Actions.IDLE;
+                animation = Animation.IDLE;
             }
-        } else if(action != Actions.DOUBLE_JUMPING) {
-            action = Actions.JUMPING;
+        } 
+        
+        if(!grounded) {
+            if(Mathf.Abs(rb.velocity.y) < 1.0f){
+                animation = Animation.SLOW_FALL;
+            } else if(rb.velocity.y > 0) {
+                animation = Animation.JUMPING;
+            } else if(rb.velocity.y < 0) {
+                animation = Animation.FAST_FALL;
+            }
         }
     }
 
@@ -104,7 +119,8 @@ public class MovementController : MonoBehaviour
 
     void OnGUI() 
     {
-        GUI.Label(new Rect(10, 10, 200, 200), "State: " + this.action);
+        GUI.color = Color.yellow;
+        GUI.Label(new Rect(10, 10, 200, 200), "State: " + this.animation);
         GUI.Label(new Rect(10, 30, 200, 200), "Grounded: " + isTouchingGround()); 
     }
      
