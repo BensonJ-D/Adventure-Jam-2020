@@ -17,6 +17,8 @@ public class MovementController : MonoBehaviour
 
     Animation animation = Animation.IDLE;
     bool doubleJump = false;
+    float dir = 0;
+    Dictionary<string, string> debugLog = new Dictionary<string, string>();
 
     // Start is called before the first frame update
     void Start()
@@ -45,8 +47,26 @@ public class MovementController : MonoBehaviour
     void Move()
     {
         bool grounded = isTouchingGround();
-        float horizontal = Input.GetAxis("Horizontal");
-        rb.velocity = new Vector2(moveSpeed * horizontal, rb.velocity.y);
+        float hInput = Input.GetAxis("Horizontal");
+        float oldVelocity = rb.velocity.x;
+        float newVelocity = 0;
+        float clampedVelocity = 0;
+        if(oldVelocity != 0) dir = Mathf.Abs(oldVelocity) / oldVelocity;
+
+        // AddDebugValue("H INPUT", hInput.ToString());
+        // AddDebugValue("Old Velocity", oldVelocity.ToString());
+        if(hInput != 0) {
+            newVelocity = (oldVelocity) + (moveSpeed / 10f * hInput);
+            clampedVelocity = Mathf.Max(Mathf.Min(newVelocity, moveSpeed), -moveSpeed);
+        } else {
+            newVelocity = (oldVelocity) + (moveSpeed / 10f * -dir);
+            clampedVelocity = dir > 0 ? Mathf.Max(newVelocity, 0) : Mathf.Min(newVelocity, 0);
+        }
+        // AddDebugValue("Dir", dir.ToString());
+        // AddDebugValue("New Velocity", newVelocity.ToString());
+        // AddDebugValue("Clamped Velocity", clampedVelocity.ToString());
+
+        rb.velocity = new Vector2(clampedVelocity, rb.velocity.y);
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
@@ -58,17 +78,17 @@ public class MovementController : MonoBehaviour
                 doubleJump = false;
                 grounded = false;
             }
-        } 
+        }
         
         if(grounded) {
             doubleJump = true;
             
-            if(horizontal != 0){
+            if(hInput != 0){
                 animation = Animation.WALKING;
             } else {
                 animation = Animation.IDLE;
             }
-        } 
+        }
         
         if(!grounded) {
             if(Mathf.Abs(rb.velocity.y) < 1.0f){
@@ -117,11 +137,24 @@ public class MovementController : MonoBehaviour
         DrawRect(groundCollider);
     }
 
+    void AddDebugValue(string name, string value) 
+    {
+        debugLog[name] = value;
+    }
+
     void OnGUI() 
     {
-        GUI.color = Color.yellow;
+        GUI.color = Color.blue;
         GUI.Label(new Rect(10, 10, 200, 200), "State: " + this.animation);
         GUI.Label(new Rect(10, 30, 200, 200), "Grounded: " + isTouchingGround()); 
+        GUI.Label(new Rect(10, 50, 200, 200), "H Speed: " + rb.velocity.x); 
+
+        int i = 0;
+        foreach (KeyValuePair<string, string> item in debugLog)
+        {
+            GUI.Label(new Rect(10, 70 + (20 * i), 200, 200), item.Key + ": " + item.Value);
+            i++;
+        }
     }
      
     void DrawRect(Rect rect)
