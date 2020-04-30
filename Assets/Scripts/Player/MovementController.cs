@@ -13,11 +13,12 @@ public class MovementController : MonoBehaviour
     [SerializeField] private Rect groundCollider;
     [SerializeField] private float maxFallSpeed;
     [SerializeField] private float moveSpeed;
+    [SerializeField] private float sampleSpeed;
     [SerializeField] private float jumpSpeed;
 
     Animation animation = Animation.IDLE;
     bool doubleJump = false;
-    float dir = 0;
+    float direction = 1;
     Dictionary<string, string> debugLog = new Dictionary<string, string>();
 
     // Start is called before the first frame update
@@ -51,21 +52,16 @@ public class MovementController : MonoBehaviour
         float oldVelocity = rb.velocity.x;
         float newVelocity = 0;
         float clampedVelocity = 0;
-        if(oldVelocity != 0) dir = Mathf.Abs(oldVelocity) / oldVelocity;
+        float dx = (moveSpeed * Time.deltaTime * sampleSpeed);
+        direction = hInput == 0 ? direction : Mathf.Abs(hInput) / hInput;
 
-        // AddDebugValue("H INPUT", hInput.ToString());
-        // AddDebugValue("Old Velocity", oldVelocity.ToString());
         if(hInput != 0) {
-            newVelocity = (oldVelocity) + (moveSpeed / 10f * hInput);
+            newVelocity = (oldVelocity) + (dx  * direction);
             clampedVelocity = Mathf.Max(Mathf.Min(newVelocity, moveSpeed), -moveSpeed);
         } else {
-            newVelocity = (oldVelocity) + (moveSpeed / 10f * -dir);
-            clampedVelocity = dir > 0 ? Mathf.Max(newVelocity, 0) : Mathf.Min(newVelocity, 0);
+            newVelocity = (oldVelocity) + (dx * -direction);
+            clampedVelocity = direction > 0 ? Mathf.Max(newVelocity, 0) : Mathf.Min(newVelocity, 0);
         }
-        // AddDebugValue("Dir", dir.ToString());
-        // AddDebugValue("New Velocity", newVelocity.ToString());
-        // AddDebugValue("Clamped Velocity", clampedVelocity.ToString());
-
         rb.velocity = new Vector2(clampedVelocity, rb.velocity.y);
 
         if (Input.GetKeyDown(KeyCode.Space))
@@ -102,12 +98,10 @@ public class MovementController : MonoBehaviour
     }
 
     void SetFacing() {
-        float horizontal = Input.GetAxis("Horizontal");
-
-        if(horizontal > 0){
+        if(direction > 0){
             renderer.flipX = false;
         }
-        else if(horizontal < 0) {
+        else if(direction < 0) {
             renderer.flipX = true;
         }
     }
@@ -145,10 +139,6 @@ public class MovementController : MonoBehaviour
     void OnGUI() 
     {
         GUI.color = Color.blue;
-        GUI.Label(new Rect(10, 10, 200, 200), "State: " + this.animation);
-        GUI.Label(new Rect(10, 30, 200, 200), "Grounded: " + isTouchingGround()); 
-        GUI.Label(new Rect(10, 50, 200, 200), "H Speed: " + rb.velocity.x); 
-
         int i = 0;
         foreach (KeyValuePair<string, string> item in debugLog)
         {
