@@ -37,6 +37,9 @@ public class MovementController : MonoBehaviour
     }
 
     void Animate() {
+        AddDebugValue("Animation State", animation.ToString());
+        AddDebugValue("Grounded", isTouchingGround().ToString());
+        
         animator.SetBool("Grounded",        isTouchingGround());
         animator.SetBool("Idle",            animation == Animation.IDLE);
         animator.SetBool("Walking",         animation == Animation.WALKING);
@@ -49,20 +52,22 @@ public class MovementController : MonoBehaviour
     {
         bool grounded = isTouchingGround();
         float hInput = Input.GetAxis("Horizontal");
-        float oldVelocity = rb.velocity.x;
-        float newVelocity = 0;
-        float clampedVelocity = 0;
+        float oldHorizontalVelocity = rb.velocity.x;
+        float newHorizontalVelocity = 0;
+        float clampedHorizontalVelocity = 0;
         float dx = (moveSpeed * Time.deltaTime * sampleSpeed);
         direction = hInput == 0 ? direction : Mathf.Abs(hInput) / hInput;
 
         if(hInput != 0) {
-            newVelocity = (oldVelocity) + (dx  * direction);
-            clampedVelocity = Mathf.Max(Mathf.Min(newVelocity, moveSpeed), -moveSpeed);
+            newHorizontalVelocity = (oldHorizontalVelocity) + (dx  * direction);
+            clampedHorizontalVelocity = Mathf.Max(Mathf.Min(newHorizontalVelocity, moveSpeed), -moveSpeed);
         } else {
-            newVelocity = (oldVelocity) + (dx * -direction);
-            clampedVelocity = direction > 0 ? Mathf.Max(newVelocity, 0) : Mathf.Min(newVelocity, 0);
+            newHorizontalVelocity = (oldHorizontalVelocity) + (dx * -direction);
+            clampedHorizontalVelocity = direction > 0 ? Mathf.Max(newHorizontalVelocity, 0) : Mathf.Min(newHorizontalVelocity, 0);
         }
-        rb.velocity = new Vector2(clampedVelocity, rb.velocity.y);
+
+        float clampedVerticalVelocity = Mathf.Max(-maxFallSpeed, rb.velocity.y);
+        rb.velocity = new Vector2(clampedHorizontalVelocity, clampedVerticalVelocity);
 
         if (Input.GetKeyDown(KeyCode.Space))
         {
@@ -87,7 +92,8 @@ public class MovementController : MonoBehaviour
         }
         
         if(!grounded) {
-            if(Mathf.Abs(rb.velocity.y) < 1.0f){
+            AddDebugValue("Absolute Y Speed", Mathf.Abs(rb.velocity.y).ToString());
+            if(Mathf.Abs(rb.velocity.y) < 2.0f){
                 animation = Animation.SLOW_FALL;
             } else if(rb.velocity.y > 0) {
                 animation = Animation.JUMPING;
@@ -142,7 +148,7 @@ public class MovementController : MonoBehaviour
         int i = 0;
         foreach (KeyValuePair<string, string> item in debugLog)
         {
-            GUI.Label(new Rect(10, 70 + (20 * i), 200, 200), item.Key + ": " + item.Value);
+            GUI.Label(new Rect(10, 10 + (20 * i), 200, 200), item.Key + ": " + item.Value);
             i++;
         }
     }
